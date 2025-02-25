@@ -4,85 +4,81 @@ const port = 3000; // Server runs on port 3000
 
 const responseText1 = `clc
 clear all
-% Input Parameters
-Z = @(x1, x2) 3*x1-x2;
-C1 = @(x1, x2) x1+x2-6;
-C2 = @(x1, x2) x1+x2-4;
 
-C = [3 -1];
-A = [1 1 ; 1 1];
-b = [6 ; 4];
+%% Inputs
+a = [1, 1; 3, 4; -1, -1]; % Coefficients of constraints
+b = [20; 72; -5];         % Right-hand side values
+c = [4, 5];               % Coefficients of objective function
 
-n = size(A, 1);
-m = size(A, 2);
+%% Plotting
+x1 = 0:0.5:max(b); % Generate x1 values for plotting
 
-% Plotting
+% Calculate x2 values for each constraint
+x21 = (b(1) - a(1,1)*x1) / a(1,2);
+x22 = (b(2) - a(2,1)*x1) / a(2,2);
+x23 = (b(3) - a(3,1)*x1) / a(3,2);
 
-x1 = 0 : 0.1 : max(b./A(:,1));
+% Ensure x2 values are non-negative
+x21(x21 < 0) = NaN;
+x22(x22 < 0) = NaN;
+x23(x23 < 0) = NaN;
 
-for i = 1:n
-    x2 = (b(i)-A(i,1)*x1)/(A(i,2));
-    x2 = max(0,x2);
-    plot(x1,x2)
-    hold on
+% Plot the constraints
+plot(x1, x21, 'r', x1, x22, 'k', x1, x23, 'm');
+title('Graph of Constraints');
+xlabel('x1');
+ylabel('x2');
+legend('x1 + x2 = 20', '3x1 + 4x2 = 72', 'x1 + x2 = 5');
+grid on
+hold on
+
+%% Intersection Points with Axes
+pts = [0, 0]; % Initialize intersection points
+
+for i = 1:size(a, 1)
+    if a(i, 1) ~= 0
+        x1_intersect = b(i) / a(i, 1);
+        if x1_intersect >= 0
+            pts = [pts; x1_intersect, 0];
+        end
+    end
+    if a(i, 2) ~= 0
+        x2_intersect = b(i) / a(i, 2);
+        if x2_intersect >= 0
+            pts = [pts; 0, x2_intersect];
+        end
+    end
 end
 
-% Intersection Points
-
-pt = [];
-
-A = [A ; eye(2)];
-b = [b ; zeros(2,1)];
-
-for i = 1 : size(A, 1)
-    for j = i+1 : size(A,1)
-        AA = [A(i,:) ; A(j,:)];
-        bb = [b(i) ; b(j)];
-
-        if det(AA) ~= 0
-            X = inv(AA)*bb;
-            if X >= 0
-                pt = [pt X];
+%% Intersection Points of Constraints
+for i = 1:size(a, 1)
+    for j = i+1:size(a, 1)
+        a4 = a([i, j], :);
+        b4 = b([i, j]);
+        if det(a4) ~= 0
+            X = a4 \ b4;
+            if all(X >= 0)
+                pts = [pts; X'];
             end
         end
     end
 end
 
-% disp(pt)
-
-% Finding Points
-
-fp = [];
-
-for i = 1:length(pt)
-    pt1 = pt(1,i);
-    pt2 = pt(2,i);
-
-    if C1(pt1,pt2) >= 0 && C2(pt1,pt2) <= 0
-        fp = [fp pt(:,i)];
-        plot(pt1, pt2, "*r", "markerSize", 10)
+%% Feasible Region
+feasible_pts = [];
+for i = 1:size(pts, 1)
+    if all(a * pts(i, :)' <= b)
+        feasible_pts = [feasible_pts; pts(i, :)];
     end
 end
 
-%disp(fp)
-
-% Optimal Solution
-
-if length(fp) == 0
-    disp("No feasible solution")
-else
-    z = [];
-
-    for i = 1 : length(fp)
-        cost = Z(fp(1,i), fp(2,i));
-        z = [z cost];
-    end
-
-    [optimal_value, index] = max(z)
-    optimal_sol = fp(:,index)
-end
-
-hold off`;
+%% Objective Value and Points
+value = feasible_pts * c'; % Calculate objective function values
+table(feasible_pts, value) % Display feasible points and their objective values
+[obj, index] = min(value); % Find the minimum value (since it's minimization)
+x1 = feasible_pts(index, 1);
+x2 = feasible_pts(index, 2);
+fprintf('Objective Value is %f at (%f, %f)\n', obj, x1, x2);`;
 
 
 const responseText2 = `bfs code 
