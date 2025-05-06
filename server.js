@@ -118,161 +118,151 @@ optimal_value = [BFS' obj]`
 
 const lcm = `clc
 clear all
-format short
-% Matlab Code of Least Cost Method (LCM)
-% Input Information
-%% Input Phase
-Cost=[11 20 7 8; 21 16 10 12; 8 12 18 9]
-A=[50 40 70]
-B=[30 25 35 40]
-%% To check unbalanced/balanced Problem
-if sum(A)==sum(B)
-    fprintf('Given Transportation Problem is Balanced \n')
-else
-   fprintf('Given Transportation Problem is Unbalanced \n') 
-   if sum(A)<sum(B)
-       Cost(end+1,:)=zeros(1,size(B,2))
-       A(end+1)=sum(B)-sum(A)
-   elseif sum(B)<sum(A)
-   Cost(:,end+1)=zeros(1,size(A,2))
-       B(end+1)=sum(A)-sum(B)  
-   end
-end
-ICost=Cost
-X=zeros(size(Cost))   % Initialize allocation
-[m,n]=size(Cost)      % Finding No. of rows and columns
-BFS=m+n-1             % Total No. of BFS
-%% Finding the cell(with minimum cost) for the allocations
-for i=1:size(Cost,1)
-    for j=1:size(Cost,2)
-hh=min(Cost(:))   % Finding minimum cost value
-[Row_index, Col_index]=find(hh==Cost)  % Finding position of minimum cost cell
-x11=min(A(Row_index),B(Col_index))
-[Value,index]=max(x11)            % Find maximum allocation
-ii=Row_index(index)       % Identify Row Position
-jj=Col_index(index)        % Identify Column Position
-y11=min(A(ii),B(jj))        % Find the value
-X(ii,jj)=y11
-A(ii)=A(ii)-y11
-B(jj)=B(jj)-y11
-Cost(ii,jj)=inf
-    end
-end
-%% Print the initial BFS
-fprintf('Initial BFS =\n')
-IBFS=array2table(X)
-disp(IBFS)
-%% Check for Degenerate and Non Degenerate
-TotalBFS=length(nonzeros(X))
-if TotalBFS==BFS
-    fprintf('Initial BFS is Non-Degenerate \n')
-else
-    fprintf('Initial BFS is Degenerate \n')
-end
-%% Compute the Initial Transportation cost
-InitialCost=sum(sum(ICost.*X))
-fprintf('Initial BFS Cost is = %d \n',InitialCost)
 
-
+cost = [11 13 17 14 ; 16 18 14 10 ; 21 24 13 10]
+Supply = [8 5 9]
+demand = [8 7 5 4]
+[m,n] = size(cost)
+if sum(Supply)==sum(demand)
+    disp('BAL')
+elseif sum(Supply)<sum(demand)
+        cost(end + 1 , :)= zeros(1,n)
+        Supply (end +1)= sum(demand)-sum(Supply)
+else
+    cost(:, end + 1)= zeros(m,1)
+        demand (end +1)= sum(Supply)-sum(demand)
+end
+[m,n] = size(cost)
+X = zeros(m,n)
+cost_in = cost
+while any(Supply)~=0 || any(demand) ~=0
+min_cost = min(cost(:))
+[r,c]=find(cost==min_cost)
+y = min(Supply(r),demand(c))
+[aloc,index] =  max(y)
+rr = r(index)
+cc = c(index)
+X(rr, cc)=aloc
+Supply(rr)=Supply(rr)-aloc
+demand(cc)=demand(cc)-aloc
+cost(rr,cc)=inf
+end
+cost_x = X.*cost_in
+final_cost = sum(cost_x(:))
 `
 
-const dualSimplex = `format short
-clc
-clear all
+const dualSimplex = `A = [-3 -1 1 0 0 ; -4 -3 0 1 0 ; -1 -2 0 0 1];
+b = [-3 ; -6 ; -3];
+C = [-2 -1 0 0 0];
 
-C=[-2 0 -1 0 0 0]
-A=[-1 -1 1 1 0 -5; -1 2 -4 0 1 -8]
-ib=[4 5]
-zjcj=C(ib)*A-C
-RUN=true;
-while RUN
-    if any(A(:,size(A,2))<0)
-        fprintf('the current BFS is not feasible')
-        [lvg_val, pvt_row]=min(A(:,size(A,2)))
-for i=1:size(A,2)-1
-    if A(pvt_row,i)<0
-        m(i)=zjcj(i)/A(pvt_row,i)
+[m, n] = size(A);
+
+Y = [A b];
+bIndex = n-m+1 : n;
+
+for s = 1:50
+    Cb = C(bIndex);
+    Xb = Y(:, end);
+    ZjCj = Cb*Y(:, 1:n) - C;
+    Z = Cb*Xb;
+    
+    table = [ZjCj Z ; Y]
+    
+    if Xb >= 0
+        disp('Feasibility Achieved')
+        Xb
+        basicVar = bIndex
+        disp('Optimal Objective Value')
+        Z
+        break
     else
-         m(i)=-inf
-     end
-end
-[ent_val, pvt_col]=max(m)
-A(pvt_row,:)=A(pvt_row,:)/A(pvt_row,pvt_col)
-for i=1:size(A,1)
-     if i~=pvt_row
-         A(i,:)=A(i,:)-A(i,pvt_col).*A(pvt_row,:)
-     end 
-end
-ib(pvt_row)=pvt_col;
-zjcj=zjcj-zjcj(pvt_col).*A(pvt_row,:)
-ZCj=[zjcj;A]
-        TABLE=array2table(ZCj);
-        TABLE.Properties.VariableNames(1:size(ZCj,2))={'x_1','x_2','x3','s_1','s_2','sol'}
-else
-    RUN=false;
- fprintf('    current BFS is Feasible and Optimal   \n')
-end
-end
-
-`
-
-const simplex = `% Simplex Method
-%max z=2x1+5X2
-%x1+4x2<=24
-%3x1+1x2<=21
-%x1+x2<=9
-clc
-clear all
-format short
-Noofvariables=2;
-C=[2 5];
-a=[1 4; 3 1; 1 1]
-b=[24; 21; 9]
-s=eye(size(a,1))
-A=[a s b]
-cost=zeros(1,size(A,2))
-cost(1:Noofvariables)=C
-bv= Noofvariables+1:1:size(A,2)-1
-zjcj=cost(bv)*A-cost
-zcj=[zjcj; A]
-simptable=array2table(zcj);
-simptable.Properties.VariableNames(1:size(zcj,2))={'x_1','x_2','s_1','s_2','s_3','sol'}
-RUN=true;
-while RUN
-if any(zjcj<0); %check for (most) negative value
-    fprintf(' the current BFS is not optimal \n')
-   zc=zjcj(1:end-1);
-   [Enter_val, pvt_col]= min(zc) 
-   if all(A(:,pvt_col)<=0)
-    error('LPP is Unbounded all enteries are <=0 in column %d',pvt_col);
-   else
-       sol=A(:,end)
-       column=A(:,pvt_col)
-       for i=1:size(A,1)
-         if column(i)>0
-            ratio(i)= sol(i)./column(i)
-         else
-            ratio(i)=inf
-         end
-       end
-       [leaving_val, pvt_row]=min(ratio)
-   end
-bv(pvt_row)=pvt_col
-pvt_key=A(pvt_row, pvt_col)
-A(pvt_row,:)=A(pvt_row,:)./pvt_key
-for i=1:size(A,1)
-    if i~=pvt_row
-        A(i,:)=A(i,:)-A(i, pvt_col).*A(pvt_row,:)
+        [a, LV] = min(Xb);
+    
+        if Y(LV, 1:n) >= 0
+            disp('No Feasible Solution')
+            break
+    
+        else
+            for j = 1:n
+                if Y(LV, j) < 0
+                    ratio(j) = abs(ZjCj(j)/Y(LV, j));
+                else
+                    ratio(j) = inf;
+                end
+            end
+        end
+    
+        [K, EV] = min(ratio);
+        bIndex(LV) = EV;
+    end
+    
+    pivot = Y(LV, EV);
+    
+    Y(LV, :) = Y(LV, :)/pivot;
+    
+    for i = 1:m
+        if i ~= LV
+            Y(i, :) = Y(i, :) - Y(i, EV)*Y(LV, :);
+        end
     end
 end
-    zjcj=zjcj-zjcj(pvt_col).*A(pvt_row,:)
-    zcj=[zjcj;A]
-    table=array2table(zcj)
-    table.Properties.VariableNames(1:size(zcj,2))={'x_1','x_2','s_1','s_2','s_3','sol'}
-else
-    RUN=false;
-    fprintf('The current BFS is optimal \n')
-end
+`
+
+const simplex = `A = [1 1 1 0 ; 2 -1 0 1];
+b = [6 ; 9];
+C = [-3 2 0 0];
+
+[m, n] = size(A);
+
+Y = [A b];   % m*(n+1)
+bIndex = n-m+1 : n;
+
+for s = 1:50
+    Cb = C(bIndex);   % 1*m
+    Xb = Y(:, end);   % end -> m+1
+    ZjCj = Cb*Y(:, 1:n) - C;   % 1*(n+1)
+    Z = Cb*Xb;
+    
+    table = [ZjCj Z ; Y]
+    
+    disp(table)
+    
+    if ZjCj >= 0
+        disp('Optimal Solution')
+        Xb
+        bIndex
+        Z
+        break
+    else
+        [a, EV] = min(ZjCj);    % stores value and index of entering variable
+    
+        if Y(:, EV) < 0
+            disp('Unbounded Solution')
+            break
+    
+        else
+            for j = 1:m
+                if Y(j, EV) > 0
+                    ratio(j) = Y(j, end)/Y(j, EV);  % Y(j, end) or Xb(j) - same thing
+                else
+                    ratio(j) = inf;
+                end
+            end
+        end
+    
+        [K, LV] = min(ratio);
+        bIndex(LV) = EV;
+    end
+    
+    pivot = Y(LV, EV);
+    
+    Y(LV, :) = Y(LV, :)/pivot;
+    
+    for i = 1:m
+        if i ~= LV
+            Y(i, :) = Y(i, :) - Y(i, EV)*Y(LV, :);
+        end
+    end
 end
 `
 
@@ -295,9 +285,11 @@ RUN= true;
 while RUN
     ZC=ZjCj(1:end-1)
     if any(ZC<0)
-        fprintf('  The current BFS is not optimal\n')
+        fprintf('  The current BFS is not optimal
+')
         [ent_col,pvt_col]=min(ZC)
-        fprintf('Entering Col =%d \n' , pvt_col);
+        fprintf('Entering Col =%d 
+' , pvt_col);
         sol=A(:,end)
         Column=A(:,pvt_col)
         if Column<=0
@@ -311,7 +303,8 @@ while RUN
                 end
             end
             [MinRatio,pvt_row]=min(ratio)
-            fprintf('leaving Row=%d \n', pvt_row);
+            fprintf('leaving Row=%d 
+', pvt_row);
         end
         BV(pvt_row)=pvt_col;
         pvt_key=A(pvt_row,pvt_col);
@@ -327,38 +320,80 @@ while RUN
         TABLE.Properties.VariableNames(1:size(ZCj,2))={'x_1','x_2','s_1','s_2','A_1','A_2','sol'}
     else
         RUN=false;
-        fprintf('  Current BFS is Optimal \n');
+        fprintf('  Current BFS is Optimal 
+');
     end
 end
-
 `
 
-const stepdesc = `clc;
+const steep1 = `clc;
 clear all;
-format short
 
-a=0
-b=0
+x0 = 1;
+y0 = 0.5;
 
-%syms x y a1;
-%f= @(x,y) x*y;
+f = @(x, y) x.^2 - x.*y + y.^2;
 
-f= @(x,y) 3*x^2-4*x*y+2*y^2+4*x+6
+grad = @(x, y) [2*x - y, 2*y - x];
 
-grad=@(x,y) [6*x-4*y+4 , -4*x+4*y]
-for k=1:4
-grad(a,b)
-d=-grad(a,b)/norm(grad(a,b))
 
-%fun=@(z)(a+z*d(1))*(b+z*d(2)) 
-fun=@(z) 3*(a+z*d(1))^2-4*(a+z*d(1))*(b+z*d(2))+2*(b+z*d(2))^2+4*(a+z*d(1))+6;
-x1 = fminbnd(fun,0,10000)
-a=a+x1*d(1)
-b=b+x1*d(2)
-f(a,b)
+alpha = 0.01;      
+epsilon = 1e-6;   
+max_iter = 1000;
+
+for k = 1:max_iter
+    g = grad(x0, y0); 
+    x = x0 - alpha * g(1);
+    y = y0 - alpha * g(2);
+    t = abs(f(x,y) - f(x0,y0));
+    
+    if t < epsilon
+        break;
+    else
+        x0=x;
+        y0=y;
+    end
+    
+
+
+    fprintf('Iter %d: x = %.6f, y = %.6f, f = %.6f, ||grad|| = %.6e\n', ...
+            k, x, y, f(x, y), t);
 end
 
+fprintf('\nMinimum found at x = %.6f, y = %.6f\n', x, y);
+fprintf('Function value at minimum f(x, y) = %.6f\n', f(x, y));
+
+% If maximum is asked, multiply the objective function by -1.
 `
+
+const steep2 = `syms l;
+f = @(x) (x(1)-2)^2 + (x(2)-3)^2;
+grad_f = @(x) [2*(x(1)-2); 2*(x(2)-3)];
+
+x = [0; 0];
+tol = 1e-6;
+max_iter = 1000;
+
+for i = 1:max_iter
+    grad = grad_f(x);
+    d = -grad;
+    
+    x_sym = x + l * d;
+    f_l = f(x_sym);
+    df_dl = diff(f_l, l);
+    lambda_star = double(solve(df_dl == 0, l));
+    
+    x_new = x + lambda_star * d;
+    
+    if norm(x_new - x) < tol
+        break;
+    end
+    
+    x = x_new;
+end
+
+fprintf('Minimum found at x = [%f, %f] after %d iterations\n', x(1), x(2), i);
+fprintf('Minimum function value f(x) = %f\n', f(x));`
 // Route for /1
 app.get('/1', (req, res) => {
     res.type('text/plain');
@@ -387,9 +422,13 @@ app.get('/bigm', (req, res) =>{
     res.type('text/plain'); 
     res.send(bigm); 
 })
-app.get('/step', (req, res) =>{
+app.get('/steep1', (req, res) =>{
     res.type('text/plain'); 
-    res.send(stepdesc); 
+    res.send(steep1); 
+})
+app.get('/steep2', (req, res) =>{
+    res.type('text/plain'); 
+    res.send(steep2); 
 })
 // Start the server
 app.listen(port, () => {
