@@ -208,9 +208,9 @@ for s = 1:50
 end
 `
 
-const simplex = `A = [1 1 1 0 ; 2 -1 0 1];
-b = [6 ; 9];
-C = [-3 2 0 0];
+const simplex = `A = [1 1 1 0 ; 2 1 0 1];
+b = [8 ; 10];
+C = [4 3 0 0];
 
 [m, n] = size(A);
 
@@ -227,7 +227,7 @@ for s = 1:50
     
     disp(table)
     
-    if ZjCj >= 0
+    if all(ZjCj >= 0)
         disp('Optimal Solution')
         Xb
         bIndex
@@ -236,7 +236,7 @@ for s = 1:50
     else
         [a, EV] = min(ZjCj);    % stores value and index of entering variable
     
-        if Y(:, EV) < 0
+        if all(Y(:, EV) <= 0)
             disp('Unbounded Solution')
             break
     
@@ -266,62 +266,68 @@ for s = 1:50
 end
 `
 
-const bigm = `format short
-clear all
-clc
-% Cost=[-4 -5 0 0 -1000 -1000 0]
-% A=[3 1 1 0 0 0 27; 3 2 0 -1 1 0 3; 5 5 0 0 0 1 60]
-% % BV=[3 5 6]
-Cost=[-2 -1 0 0 -10000 -10000 0]
-A=[3 1 0 0 1 0 3; 4 3 -1 0 0 1 6 ;1 2 0 1 0 0 3]
-BV=[5 6 4]
- 
-ZjCj=Cost(BV)*A-Cost
- zcj=[Cost;ZjCj;A];
-    bigmtable=array2table(zcj);
-    bigmtable.Properties.VariableNames(1:size(zcj,2))={'x_1','x_2','s_1','s_2','A_1','A_2','sol'}
- 
-RUN= true;
-while RUN
-    ZC=ZjCj(1:end-1)
-    if any(ZC<0)
-        fprintf('  The current BFS is not optimal
-')
-        [ent_col,pvt_col]=min(ZC)
-        fprintf('Entering Col =%d 
-' , pvt_col);
-        sol=A(:,end)
-        Column=A(:,pvt_col)
-        if Column<=0
-            error('LPP is unbounded');
+const bigm = `M = 10000;
+
+A = [1 2 1 0 0 ; 2 3 0 -1 1];
+
+b = [1 ; 6];
+
+C = [1 1 0 0 -M];
+
+[m, n] = size(A);
+Y = [A b];
+
+bIndex = [3 5];
+
+for iter = 1:50
+    Cb = C(bIndex);
+    Zj = Cb * Y(:, 1:n);
+    ZjCj = Zj - C;
+    Z = Cb * Y(:, end);
+
+    table = [ZjCj Z; Y];
+    disp(['--- Iteration ' num2str(iter) ' ---']);
+    disp(table);
+
+    if all(ZjCj >= 0)
+        artificial_in_basis = intersect(bIndex, [5]);
+        if ~isempty(artificial_in_basis) && any(Y(bIndex == artificial_in_basis, end) > 0.001)
+            fprintf('\nNo feasible solution exists (artificial variables in basis)\n');
         else
-            for i=1:size(A,1)
-                if Column(i)>0
-                    ratio(i)=sol(i)./Column(i)
-                else
-                    ratio(i)=inf
-                end
-            end
-            [MinRatio,pvt_row]=min(ratio)
-            fprintf('leaving Row=%d 
-', pvt_row);
+            disp('Optimal solution found');
+            solution = zeros(n, 1);
+            solution(bIndex) = Y(:, end);
+            disp('Values of decision variables (x1, x2):');
+            disp(solution(1:2));
+            disp(['Optimal value of Z: ', num2str(Z)]);
         end
-        BV(pvt_row)=pvt_col;
-        pvt_key=A(pvt_row,pvt_col);
-        A(pvt_row,:)=A(pvt_row,:)./ pvt_key;
-        for i=1:size(A,1)
-            if i~=pvt_row
-                A(i,:)=A(i,:)-A(i,pvt_col).*A(pvt_row,:);
-            end
+        break;
+    end
+
+    [minval, EV] = min(ZjCj);
+    if all(Y(:, EV) <= 0)
+        disp('Unbounded solution');
+        break;
+    end
+
+    ratio = inf(m, 1);
+    for i = 1:m
+        if Y(i, EV) > 0
+            ratio(i) = Y(i, end) / Y(i, EV);
         end
-        ZjCj=ZjCj-ZjCj(pvt_col).*A(pvt_row,:)
-        ZCj=[ZjCj;A]
-        TABLE=array2table(ZCj);
-        TABLE.Properties.VariableNames(1:size(ZCj,2))={'x_1','x_2','s_1','s_2','A_1','A_2','sol'}
-    else
-        RUN=false;
-        fprintf('  Current BFS is Optimal 
-');
+    end
+
+    [~, LV] = min(ratio);
+
+    bIndex(LV) = EV;
+
+    pivot = Y(LV, EV);
+    Y(LV, :) = Y(LV, :) / pivot;
+
+    for i = 1:m
+        if i ~= LV
+            Y(i, :) = Y(i, :) - Y(i, EV) * Y(LV, :);
+        end
     end
 end
 `
